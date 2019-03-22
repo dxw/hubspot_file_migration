@@ -2,8 +2,18 @@ require './lib/hubspot_file_migration'
 
 documents = HubspotFileMigration::Documents.all
 failures = []
+remaining_documents = nil
 
-documents.all.each do |document|
+def generate_csv(filename, arr)
+  CSV.open(filename, 'wb') do |csv|
+    csv << ['Document ID', 'Document title']
+    arr.each do |f|
+      csv << [f.id, f.title]
+    end
+  end
+end
+
+documents.each_with_index do |document, index|
   next if document.deal.nil?
 
   deal = HubspotFileMigration::Deals.find_by_id(document.deal.id)
@@ -24,13 +34,11 @@ documents.all.each do |document|
     # Queue up to try again
     failures << document
   end
+
+rescue
+  generate_csv('docs.csv', documents[index..-1])
+  puts 'Hit an error. Remaining documents are in docs.csv'
 end
 
+generate_csv('failures.csv', failures)
 puts "Documents uploaded. See `failures.csv` for a list of failed uploads."
-
-CSV.open('failures.csv', 'wb') do |csv|
-  csv << ['Document ID', 'Document title']
-  failures.each do |f|
-    csv << [f.id, f.title]
-  end
-end
