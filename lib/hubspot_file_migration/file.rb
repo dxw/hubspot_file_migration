@@ -8,10 +8,32 @@ module HubspotFileMigration
       @file = open(url)
     end
 
+    def self.find(id)
+      response = Faraday.new('http://api.hubapi.com').get("/filemanager/api/v2/files/#{id}?hapikey=#{ENV['HUBSPOT_API_KEY']}")
+      JSON.parse(response.body)
+    end
+
     def self.create(document)
+      retries ||= 0
       file = new(document)
       file.upload!
       file
+    rescue
+      puts "Error uploading file. Retrying..."
+      sleep retries * 5
+      if (retries += 1) < 3
+        retry
+      else
+        return nil
+      end
+    end
+
+    def self.exists_for_deal?(deal_id, document)
+      engagements = Hubspot::Engagement.find_by_association(deal_id, 'deal')
+      notes = engagements.select { |e| e.engagement['type'] == 'NOTE' }
+      file_ids = notes.map { |n| n.attachments.first['id'] }
+      files = file_ids.map { |id| find(id) }
+      files.select { |f| f['file_hash'] == document.etag }.present?
     end
 
     def upload!

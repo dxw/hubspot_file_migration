@@ -1,12 +1,36 @@
 require './lib/hubspot_file_migration'
 
-HubspotFileMigration::Documents.all.each do |document|
+documents = HubspotFileMigration::Documents.all
+failures = []
+
+documents.all.each do |document|
   next if document.deal.nil?
 
-  file = HubspotFileMigration::File.create(document)
   deal = HubspotFileMigration::Deals.find_by_id(document.deal.id)
 
-  puts "Associating file #{file.id} with deal #{deal.deal_id}"
+  next if deal.nil?
 
-  HubspotFileMigration::Engagement.create(file.id, deal.deal_id)
+  if HubspotFileMigration::File.exists_for_deal?(deal.deal_id, document)
+    puts "File #{document.attributes['title']} already exists for deal #{deal.deal_id} - skipping"
+    next
+  end
+
+  file = HubspotFileMigration::File.create(document)
+
+  if file
+    puts "Associating file #{file.id} with deal #{deal.deal_id}"
+    HubspotFileMigration::Engagement.create(file.id, deal.deal_id)
+  else
+    # Queue up to try again
+    failures << document
+  end
+end
+
+puts "Documents uploaded. See `failures.csv` for a list of failed uploads."
+
+CSV.open('failures.csv', 'wb') do |csv|
+  csv << ['Document ID', 'Document title']
+  failures.each do |f|
+    csv << [f.id, f.title]
+  end
 end
