@@ -35,9 +35,10 @@ documents.each_with_index do |document, index|
     failures << document
   end
 
-rescue
+rescue => e
   generate_csv('docs.csv', documents[index..-1])
   puts 'Hit an error. Remaining documents are in docs.csv'
+  raise e
 end
 
 generate_csv('failures.csv', failures)
