@@ -31,7 +31,9 @@ module HubspotFileMigration
     def self.exists_for_deal?(deal_id, document)
       engagements = Hubspot::Engagement.find_by_association(deal_id, 'deal')
       notes = engagements.select { |e| e.engagement['type'] == 'NOTE' }
-      file_ids = notes.map { |n| n.attachments.first['id'] }
+      file_ids = notes.select do |n|
+        n.attachments.count > 0 && n.attachments.first['id']
+      end.map { |n| n.attachments.first['id'] }
       files = file_ids.map { |id| find(id) }
       files.select { |f| f['file_hash'] == document.etag }.present?
     end
