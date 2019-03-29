@@ -1,6 +1,15 @@
 require './lib/hubspot_file_migration'
 
-documents = HubspotFileMigration::Documents.all
+documents = if ENV['RETRY'].nil?
+  puts 'Getting all documents...'
+  HubspotFileMigration::Documents.all
+else
+  puts 'Fetching documents from docs.csv'
+  CSV.read('docs.csv', { headers: true }).map do |r|
+    PipelineDeals::Document.find(r['Document ID'])
+  end
+end
+
 failures = []
 remaining_documents = nil
 
