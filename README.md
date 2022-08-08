@@ -1,3 +1,8 @@
+# This repository has been archived.
+
+This means the versions of the libraries used will become progessively out of date,
+and there may be security issues with the versions used. Good luck in uncharted waters.
+
 # Hubspot File Migration
 
 Migrates files associated with deals from Pipeline Deals to Hubspot
